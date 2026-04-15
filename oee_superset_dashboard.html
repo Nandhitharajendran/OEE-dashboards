@@ -1,0 +1,1089 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OEE Command Center</title>
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=DM+Sans:wght@300;400;500;600;700&family=Orbitron:wght@700;900&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.min.js"></script>
+<style>
+:root{--bg:#050709;--bg2:#080c12;--bg3:#0c1118;--border:rgba(255,255,255,.05);--border2:rgba(255,255,255,.10);--cyan:#00e5ff;--green:#39ff8a;--amber:#f5a623;--red:#ff3b5c;--purple:#a78bfa;--text:#d8e8f8;--muted:#3a5570;--sw:228px;}
+*{box-sizing:border-box;margin:0;padding:0}html,body{height:100%;overflow:hidden}
+body{background:var(--bg);font-family:'DM Sans',sans-serif;color:var(--text);display:flex}
+body::before{content:'';position:fixed;inset:0;background:repeating-linear-gradient(0deg,transparent,transparent 2px,rgba(0,0,0,.03) 2px,rgba(0,0,0,.03) 4px);pointer-events:none;z-index:9998}
+body::after{content:'';position:fixed;inset:0;background-image:linear-gradient(rgba(0,229,255,.02) 1px,transparent 1px),linear-gradient(90deg,rgba(0,229,255,.02) 1px,transparent 1px);background-size:40px 40px;pointer-events:none;z-index:0}
+/* LOGIN */
+#login-overlay{position:fixed;inset:0;z-index:9999;background:var(--bg);display:flex;align-items:center;justify-content:center}
+#login-overlay.hidden{display:none}
+.lbox{width:380px;background:var(--bg2);border:1px solid var(--border2);border-radius:3px;padding:38px 34px;position:relative;overflow:hidden}
+.lbox::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 50% 0%,rgba(0,229,255,.08),transparent 70%);pointer-events:none}
+.lc{position:absolute;width:12px;height:12px;border-color:var(--cyan);border-style:solid}
+.lc.tl{top:7px;left:7px;border-width:2px 0 0 2px}.lc.tr{top:7px;right:7px;border-width:2px 2px 0 0}
+.lc.bl{bottom:7px;left:7px;border-width:0 0 2px 2px}.lc.br{bottom:7px;right:7px;border-width:0 2px 2px 0}
+.lbrand{font-family:'Orbitron',monospace;font-size:10px;font-weight:700;color:var(--cyan);letter-spacing:.28em;margin-bottom:4px}
+.lhead{font-family:'Orbitron',monospace;font-size:20px;font-weight:900;color:#fff;margin-bottom:4px;letter-spacing:.04em}
+.ldesc{font-size:11px;color:var(--muted);margin-bottom:22px}
+.llbl{font-size:9px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--muted);display:block;margin-bottom:5px}
+.linp{width:100%;background:rgba(0,229,255,.03);border:1px solid var(--border2);border-radius:2px;color:var(--text);font-family:'Space Mono',monospace;font-size:12px;padding:10px 13px;outline:none;transition:all .2s;margin-bottom:12px}
+.linp:focus{border-color:rgba(0,229,255,.5);background:rgba(0,229,255,.04)}
+.lerr{background:rgba(255,59,92,.08);border:1px solid rgba(255,59,92,.3);border-radius:2px;padding:8px 12px;font-size:11px;color:var(--red);margin-bottom:12px;display:none;font-family:'Space Mono',monospace}
+.lerr.show{display:block}
+.lbtn{width:100%;padding:12px;border-radius:2px;border:none;cursor:pointer;background:var(--cyan);color:#000;font-family:'Orbitron',monospace;font-weight:700;font-size:11px;letter-spacing:.16em;text-transform:uppercase;transition:all .2s}
+.lbtn:hover{box-shadow:0 0 26px rgba(0,229,255,.35);transform:translateY(-1px)}
+.lhint{margin-top:16px;padding:11px;background:rgba(255,255,255,.02);border:1px solid var(--border);border-radius:2px;font-family:'Space Mono',monospace;font-size:10px;color:var(--muted)}
+.lhint b{color:var(--cyan)}
+/* SIDEBAR */
+.sidebar{width:var(--sw);background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;position:fixed;top:0;left:0;bottom:0;z-index:100}
+.sidebar::after{content:'';position:absolute;top:0;right:0;width:1px;height:100%;background:linear-gradient(to bottom,transparent,var(--cyan),transparent);opacity:.22}
+.sblogo{padding:18px 17px 14px}
+.lmark{width:32px;height:32px;border:1.5px solid var(--cyan);border-radius:2px;display:flex;align-items:center;justify-content:center;margin-bottom:8px}
+.lmark::before{content:'';width:8px;height:8px;border-radius:50%;background:var(--cyan);box-shadow:0 0 9px var(--cyan),0 0 22px rgba(0,229,255,.3)}
+.lname{font-family:'Orbitron',monospace;font-weight:900;font-size:12px;letter-spacing:.1em;color:#fff}
+.lsub{font-size:8px;color:var(--muted);letter-spacing:.1em;margin-top:2px;text-transform:uppercase}
+.nsec{padding:14px 0 3px}
+.nlbl{padding:0 17px;font-size:8px;font-weight:700;letter-spacing:.18em;color:var(--muted);text-transform:uppercase;margin-bottom:2px}
+.ni{display:flex;align-items:center;gap:9px;padding:9px 17px;cursor:pointer;transition:all .15s;color:var(--muted);font-size:12px;font-weight:500;border:none;background:none;width:100%;text-align:left;position:relative}
+.ni:hover{color:var(--text);background:rgba(255,255,255,.03)}
+.ni.active{color:var(--cyan);background:rgba(0,229,255,.06)}
+.ni.active::before{content:'';position:absolute;left:0;top:0;bottom:0;width:2px;background:var(--cyan);box-shadow:0 0 7px var(--cyan)}
+.niv{width:14px;height:14px;flex-shrink:0;opacity:.6}.ni.active .niv{opacity:1}
+.nbadge{margin-left:auto;font-size:8px;font-weight:700;padding:2px 6px;border-radius:1px;background:rgba(57,255,138,.12);color:var(--green);border:1px solid rgba(57,255,138,.25);font-family:'Space Mono',monospace;animation:bp 2s infinite}
+@keyframes bp{0%,100%{opacity:1}50%{opacity:.5}}
+.sbfoot{margin-top:auto;padding:13px 17px;border-top:1px solid var(--border)}
+.scard{background:var(--bg3);border:1px solid var(--border);border-radius:2px;padding:10px 12px}
+.shdr{font-size:8px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;margin-bottom:4px}
+.sval{font-family:'Space Mono',monospace;font-size:12px;color:var(--cyan);font-weight:700}
+.stime{font-family:'Space Mono',monospace;font-size:10px;color:var(--muted);margin-top:2px}
+.lrow{display:flex;align-items:center;gap:5px;margin-top:6px}
+.ldot{width:5px;height:5px;border-radius:50%;background:var(--green);box-shadow:0 0 5px var(--green);animation:ld 1.6s infinite}
+@keyframes ld{0%,100%{opacity:1}50%{opacity:.2}}
+.llbl2{font-size:8px;color:var(--green);font-family:'Space Mono',monospace;letter-spacing:.08em}
+/* MAIN */
+.main{margin-left:var(--sw);flex:1;display:flex;flex-direction:column;min-height:100vh;position:relative;z-index:1}
+/* TOPBAR */
+.topbar{display:flex;align-items:center;justify-content:space-between;padding:12px 22px;background:rgba(8,12,18,.97);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:50;backdrop-filter:blur(10px)}
+.pgsup{font-size:8px;color:var(--muted);letter-spacing:.18em;text-transform:uppercase;font-family:'Space Mono',monospace;margin-bottom:1px}
+.pgtitle{font-family:'Orbitron',monospace;font-weight:900;font-size:14px;color:#fff;letter-spacing:.06em}
+.tbar{display:flex;align-items:center;gap:6px}
+.tbtn{background:rgba(255,255,255,.04);border:1px solid var(--border2);color:var(--muted);font-size:10px;font-weight:500;padding:6px 11px;border-radius:2px;cursor:pointer;transition:all .18s;font-family:'DM Sans',sans-serif;display:flex;align-items:center;gap:5px}
+.tbtn:hover{background:rgba(0,229,255,.07);border-color:rgba(0,229,255,.3);color:var(--cyan)}
+.tbtn-a{border-color:rgba(245,166,35,.25);color:var(--amber)}
+.tbtn-a:hover{background:rgba(245,166,35,.07);border-color:rgba(245,166,35,.5);color:var(--amber)}
+.upill{display:flex;align-items:center;gap:7px;background:rgba(255,255,255,.03);border:1px solid var(--border);border-radius:2px;padding:5px 10px 5px 7px;cursor:pointer;transition:all .18s}
+.upill:hover{border-color:rgba(255,59,92,.4);background:rgba(255,59,92,.05)}
+.uav{width:20px;height:20px;border-radius:2px;background:linear-gradient(135deg,var(--cyan),var(--purple));display:flex;align-items:center;justify-content:center;font-size:8px;font-weight:700;color:#000;font-family:'Orbitron',monospace}
+.unm{font-size:10px;font-weight:600;color:var(--text);font-family:'Space Mono',monospace}
+.ulbl{font-size:9px;color:var(--red)}
+/* STATUS */
+#sb{display:none;margin:10px 22px 0;padding:8px 13px;border-radius:2px;font-size:10px;font-weight:500;align-items:center;gap:8px;font-family:'Space Mono',monospace}
+#sb.show{display:flex}
+#sb.loading{background:rgba(0,229,255,.05);border:1px solid rgba(0,229,255,.2);color:var(--cyan)}
+#sb.success{background:rgba(57,255,138,.05);border:1px solid rgba(57,255,138,.2);color:var(--green)}
+#sb.error{background:rgba(255,59,92,.06);border:1px solid rgba(255,59,92,.25);color:var(--red)}
+.spin{width:11px;height:11px;border:2px solid rgba(0,229,255,.2);border-top-color:var(--cyan);border-radius:50%;animation:sp .7s linear infinite;flex-shrink:0}
+@keyframes sp{to{transform:rotate(360deg)}}
+/* CONTENT */
+.content-area{overflow-y:auto;height:calc(100vh - 55px);scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.page{display:none;animation:fu .2s ease}.page.active{display:block}
+@keyframes fu{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
+/* LOADING SKELETON */
+.skeleton{background:linear-gradient(90deg,var(--bg3) 25%,var(--bg2) 50%,var(--bg3) 75%);background-size:400% 100%;animation:sk 1.4s ease infinite;border-radius:2px}
+@keyframes sk{0%{background-position:100% 50%}100%{background-position:0% 50%}}
+/* FILTER STRIP */
+.fstrip{display:flex;align-items:center;gap:6px;padding:8px 22px;border-bottom:1px solid var(--border);background:rgba(8,12,18,.5);flex-wrap:wrap}
+.flbl{font-size:8px;color:var(--muted);letter-spacing:.14em;text-transform:uppercase;font-family:'Space Mono',monospace}
+.fbtn{font-size:9px;font-weight:600;padding:4px 9px;border-radius:1px;border:1px solid var(--border2);background:transparent;color:var(--muted);cursor:pointer;transition:all .14s;font-family:'Space Mono',monospace}
+.fbtn:hover,.fbtn.active{border-color:var(--cyan);color:var(--cyan);background:rgba(0,229,255,.06)}
+.fsep{color:var(--border2);font-size:12px;margin:0 1px}
+.flive{margin-left:auto;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;display:flex;align-items:center;gap:5px}
+/* CARD */
+.card{background:var(--bg2);border:1px solid var(--border);border-radius:2px;position:relative;overflow:hidden;transition:border-color .2s}
+.card:hover{border-color:var(--border2)}
+.card::before,.card::after{content:'';position:absolute;width:8px;height:8px;border-color:rgba(0,229,255,.16);border-style:solid;pointer-events:none;z-index:2}
+.card::before{top:4px;left:4px;border-width:1px 0 0 1px}
+.card::after{bottom:4px;right:4px;border-width:0 1px 1px 0}
+.ca{position:absolute;top:0;left:0;right:0;height:1.5px;z-index:1}
+.ch{display:flex;align-items:flex-start;justify-content:space-between;margin-bottom:10px;gap:8px}
+.ct{font-size:9px;font-weight:700;letter-spacing:.12em;color:#ddeeff;text-transform:uppercase;font-family:'Space Mono',monospace;display:flex;align-items:center;gap:6px;flex-shrink:0}
+.cdot{width:5px;height:5px;border-radius:50%;flex-shrink:0}
+.cact{display:flex;gap:4px;align-items:center;flex-wrap:wrap;justify-content:flex-end}
+/* DOWNLOAD BTNS */
+.dlbtn{background:rgba(0,229,255,.06);border:1px solid rgba(0,229,255,.18);color:var(--cyan);font-size:8px;font-family:'Space Mono',monospace;padding:3px 7px;border-radius:1px;cursor:pointer;letter-spacing:.04em;transition:all .14s;display:inline-flex;align-items:center;gap:3px;white-space:nowrap}
+.dlbtn:hover{background:rgba(0,229,255,.14);border-color:rgba(0,229,255,.4)}
+.dlbtn.csv{border-color:rgba(57,255,138,.18);color:var(--green);background:rgba(57,255,138,.04)}
+.dlbtn.csv:hover{background:rgba(57,255,138,.12);border-color:rgba(57,255,138,.4)}
+/* KPI */
+.kc{padding:14px 16px}
+.ktag{font-size:8px;font-weight:700;letter-spacing:.16em;color:var(--muted);text-transform:uppercase;font-family:'Space Mono',monospace;display:block;margin-bottom:6px}
+.knum{font-family:'Orbitron',monospace;font-weight:900;line-height:1;letter-spacing:-.02em}
+.kunit{font-family:'Space Mono',monospace;font-size:9px;color:var(--muted);margin-top:3px}
+.ksrow{display:flex;gap:10px;margin-top:10px;padding-top:10px;border-top:1px solid var(--border)}
+.ks{text-align:center;flex:1}
+.ksv{font-family:'Orbitron',monospace;font-size:13px;font-weight:700}
+.ksl{font-size:7px;color:var(--muted);letter-spacing:.1em;text-transform:uppercase;margin-top:2px;font-family:'Space Mono',monospace}
+.badge{font-size:8px;font-weight:700;padding:2px 7px;border-radius:1px;font-family:'Space Mono',monospace;letter-spacing:.05em}
+.by{background:rgba(245,166,35,.1);color:var(--amber);border:1px solid rgba(245,166,35,.22)}
+.bg{background:rgba(57,255,138,.1);color:var(--green);border:1px solid rgba(57,255,138,.22)}
+.br{background:rgba(255,59,92,.1);color:var(--red);border:1px solid rgba(255,59,92,.22)}
+/* TABLE */
+.twrap{overflow-y:auto;scrollbar-width:thin;scrollbar-color:var(--border2) transparent}
+.twrap::-webkit-scrollbar{width:4px}.twrap::-webkit-scrollbar-thumb{background:rgba(255,255,255,.07)}
+.tbl{width:100%;border-collapse:collapse}
+.tbl thead{position:sticky;top:0;z-index:5;background:var(--bg2)}
+.tbl thead th{font-size:8px;font-weight:700;letter-spacing:.12em;text-transform:uppercase;color:var(--muted);padding:7px 9px;text-align:left;font-family:'Space Mono',monospace;border-bottom:1px solid var(--border);cursor:pointer;user-select:none;white-space:nowrap}
+.tbl thead th:hover{color:var(--cyan)}
+.tbl thead th.sort-asc::after{content:' ▲';font-size:7px}
+.tbl thead th.sort-desc::after{content:' ▼';font-size:7px}
+.tbl tbody tr{border-bottom:1px solid rgba(255,255,255,.022);transition:background .12s}
+.tbl tbody tr:hover{background:rgba(255,255,255,.025)}
+.tbl tbody td{font-size:10px;padding:6px 9px;color:var(--text);font-family:'Space Mono',monospace;white-space:nowrap}
+.sbadge{display:inline-block;font-size:8px;font-weight:700;padding:2px 7px;border-radius:1px;letter-spacing:.07em;font-family:'Orbitron',monospace}
+.s-ok{background:rgba(57,255,138,.08);color:var(--green);border:1px solid rgba(57,255,138,.2)}
+.s-delay{background:rgba(245,166,35,.08);color:var(--amber);border:1px solid rgba(245,166,35,.2)}
+.s-stop{background:rgba(255,59,92,.08);color:var(--red);border:1px solid rgba(255,59,92,.2)}
+.s-crit{background:rgba(255,59,92,.08);color:var(--red);border:1px solid rgba(255,59,92,.2)}
+.s-norm{background:rgba(57,255,138,.08);color:var(--green);border:1px solid rgba(57,255,138,.2)}
+.s-over{background:rgba(255,59,92,.08);color:var(--red);border:1px solid rgba(255,59,92,.2)}
+.mbg{width:55px;height:2px;background:var(--border2);border-radius:1px;display:inline-block;vertical-align:middle;margin-left:4px}
+.mbf{height:100%;border-radius:1px}
+.lnm{color:#fff;font-weight:700}
+.trinfo{font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:5px;text-align:right}
+/* LEGEND */
+.legrow{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.leg{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted);font-family:'Space Mono',monospace}
+.legline{width:12px;height:2px;border-radius:1px}
+/* GRID */
+.pgwrap{padding:14px 22px 34px;display:flex;flex-direction:column;gap:12px}
+.g1{display:grid;gap:12px}
+.g2{grid-template-columns:1fr 1fr}
+.g3{grid-template-columns:1fr 1fr 1fr}
+.g4{grid-template-columns:1fr 1fr 1fr 1fr}
+.g21{grid-template-columns:2fr 1fr}
+.g12{grid-template-columns:1fr 2fr}
+.goee{grid-template-columns:220px 1fr}
+/* CHART HEIGHTS */
+.h110{height:110px;position:relative}.h150{height:150px;position:relative}
+.h185{height:185px;position:relative}.h210{height:210px;position:relative}
+::-webkit-scrollbar{width:4px;height:4px}::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(255,255,255,.06);border-radius:2px}
+</style>
+</head>
+<body>
+
+<!-- LOGIN -->
+<div id="login-overlay">
+  <div class="lbox">
+    <div class="lc tl"></div><div class="lc tr"></div><div class="lc bl"></div><div class="lc br"></div>
+    <div class="lbrand">Manufacturing Intelligence</div>
+    <div class="lhead">OEE CENTER</div>
+    <div class="ldesc">Authenticate to access the command center</div>
+    <div class="lerr" id="lerr">// ERROR: Invalid credentials</div>
+    <label class="llbl">Username</label>
+    <input class="linp" id="lu" type="text" placeholder="username" autocomplete="username"/>
+    <label class="llbl">Password</label>
+    <input class="linp" id="lp" type="password" placeholder="••••••••" autocomplete="current-password"/>
+    <button class="lbtn" onclick="doLogin()">ACCESS SYSTEM</button>
+    <div class="lhint">// <b>admin</b> / <b>admin123</b> &nbsp;·&nbsp; <b>viewer</b> / <b>view123</b></div>
+  </div>
+</div>
+
+<!-- SIDEBAR -->
+<aside class="sidebar">
+  <div class="sblogo">
+    <div class="lmark"></div>
+    <div class="lname">OEE CENTER</div>
+    <div class="lsub">Manufacturing Intelligence</div>
+  </div>
+  <div class="nsec">
+    <div class="nlbl">Dashboards</div>
+    <button class="ni active" onclick="showPage('oee')">
+      <svg class="niv" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><circle cx="10" cy="10" r="7"/><path d="M10 10l3.5-3.5"/><circle cx="10" cy="10" r="2" fill="currentColor" stroke="none"/></svg>OEE Overview
+    </button>
+    <button class="ni" onclick="showPage('downtime')">
+      <svg class="niv" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><rect x="3" y="3" width="14" height="14" rx="1"/><path d="M10 7v4M10 13h.01"/></svg>Downtime<span class="nbadge">LIVE</span>
+    </button>
+    <button class="ni" onclick="showPage('quality')">
+      <svg class="niv" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M9 12l2 2 4-4M5 10a5 5 0 1010 0 5 5 0 00-10 0"/></svg>Quality
+    </button>
+    <button class="ni" onclick="showPage('energy')">
+      <svg class="niv" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M13 3L7 11h5l-1 6 6-8h-5l1-6z"/></svg>Energy
+    </button>
+  </div>
+  <div class="nsec">
+    <div class="nlbl">Actions</div>
+    <button class="ni" onclick="downloadPDF()">
+      <svg class="niv" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M10 3v10M6 9l4 4 4-4M4 16h12"/></svg>Export PDF
+    </button>
+    <button class="ni" onclick="openSuperset()">
+      <svg class="niv" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M11 3H5a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-6M15 3l2 2-7 7-3 1 1-3 7-7z"/></svg>Open Superset
+    </button>
+  </div>
+  <div class="sbfoot">
+    <div class="scard">
+      <div class="shdr">// Active Shift</div>
+      <div class="sval" id="shiftval">Shift A</div>
+      <div class="stime" id="shifttime">--:--</div>
+      <div class="lrow"><div class="ldot"></div><span class="llbl2">LIVE FEED</span></div>
+    </div>
+  </div>
+</aside>
+
+<!-- MAIN -->
+<main class="main">
+  <div class="topbar">
+    <div>
+      <div class="pgsup" id="pgsup">// Dashboard</div>
+      <div class="pgtitle" id="pgtitle">OEE Overview</div>
+    </div>
+    <div class="tbar">
+      <button class="tbtn" onclick="handleRefresh()"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 4v5h5M16 16v-5h-5M20 10A10 10 0 114.93 4.93"/></svg>Refresh</button>
+      <button class="tbtn tbtn-a" onclick="editDashboard()"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3l2 2-7 7-3 1 1-3 7-7z"/></svg>Edit in Superset</button>
+      <button class="tbtn" onclick="downloadPDF()"><svg width="10" height="10" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v2h12v-2M10 3v10M6 9l4 4 4-4"/></svg>PDF</button>
+      <div class="upill" onclick="doLogout()"><div class="uav" id="uav">AD</div><span class="unm" id="unm">Admin</span><span class="ulbl">↩</span></div>
+    </div>
+  </div>
+  <div id="sb"><div class="spin" id="sp"></div><span id="sm"></span></div>
+
+  <div class="content-area">
+
+  <!-- ═══ OEE OVERVIEW ════════════════════════════ -->
+  <div class="page active" id="page-oee">
+    <div class="fstrip">
+      <span class="flbl">Shift</span>
+      <button class="fbtn active" id="oee-f-all"  onclick="oeeFilter('all')">All</button>
+      <button class="fbtn"        id="oee-f-A"    onclick="oeeFilter('A')">Shift A</button>
+      <button class="fbtn"        id="oee-f-B"    onclick="oeeFilter('B')">Shift B</button>
+      <button class="fbtn"        id="oee-f-C"    onclick="oeeFilter('C')">Shift C</button>
+      <div class="flive"><div class="ldot"></div><span id="oee-count">Loading…</span></div>
+    </div>
+    <div class="pgwrap">
+      <!-- Top: KPIs + Availability + Performance -->
+      <div class="g1 goee">
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <!-- OEE Score KPI -->
+          <div class="card kc" id="oee-kpi-card">
+            <div class="ca" style="background:linear-gradient(90deg,var(--cyan),var(--purple))"></div>
+            <div class="ch"><span class="ktag">// OEE Score</span><span class="badge by" id="oee-status-badge">LOADING…</span></div>
+            <div class="knum" style="font-size:46px;color:var(--cyan)" id="oee-score-num">--</div>
+            <div class="kunit" id="oee-target-txt">Target: 75%</div>
+            <div style="margin-top:7px;height:2px;background:var(--border2);border-radius:1px">
+              <div id="oee-progress-bar" style="width:0%;height:100%;background:var(--cyan);border-radius:1px;box-shadow:0 0 7px rgba(0,229,255,.4);transition:width 1s ease"></div>
+            </div>
+            <div class="ksrow">
+              <div class="ks"><div class="ksv" style="color:var(--green)" id="oee-avail">--</div><div class="ksl">Availability</div></div>
+              <div class="ks"><div class="ksv" style="color:var(--cyan)"  id="oee-perf">--</div><div class="ksl">Performance</div></div>
+              <div class="ks"><div class="ksv" style="color:var(--purple)" id="oee-qual">--</div><div class="ksl">Quality</div></div>
+            </div>
+          </div>
+          <!-- OEE Gauge -->
+          <div class="card" style="padding:14px 16px;display:flex;flex-direction:column;align-items:center">
+            <div class="ca" style="background:linear-gradient(90deg,var(--amber),#d97706)"></div>
+            <div class="ct" style="align-self:flex-start;margin-bottom:8px"><div class="cdot" style="background:var(--amber);box-shadow:0 0 5px var(--amber)"></div>OEE % GAUGE</div>
+            <div style="position:relative;width:148px;height:80px"><canvas id="oee-gauge"></canvas></div>
+            <div style="font-family:'Orbitron',monospace;font-size:24px;font-weight:900;color:var(--amber);margin-top:-4px" id="oee-gauge-num">--</div>
+            <div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:.08em">OEE PERCENTAGE</div>
+          </div>
+        </div>
+        <!-- Availability + Performance trends -->
+        <div style="display:flex;flex-direction:column;gap:11px">
+          <div class="card" style="padding:14px 16px;flex:1">
+            <div class="ca" style="background:linear-gradient(90deg,var(--green),#1dcf7a)"></div>
+            <div class="ch">
+              <div class="ct"><div class="cdot" style="background:var(--green);box-shadow:0 0 5px var(--green)"></div>AVAILABILITY TREND</div>
+              <div class="cact">
+                <div class="legrow"><div class="leg"><div class="legline" style="background:var(--green)"></div>AVG availability</div></div>
+                <button class="dlbtn" onclick="dlChart('av-chart','Availability_Trend')">⬇ PNG</button>
+              </div>
+            </div>
+            <div class="h185"><canvas id="av-chart"></canvas></div>
+          </div>
+          <div class="card" style="padding:14px 16px;flex:1">
+            <div class="ca" style="background:linear-gradient(90deg,var(--purple),#7c3aed)"></div>
+            <div class="ch">
+              <div class="ct"><div class="cdot" style="background:var(--purple);box-shadow:0 0 5px var(--purple)"></div>PERFORMANCE TREND</div>
+              <div class="cact">
+                <div class="legrow"><div class="leg"><div class="legline" style="background:var(--purple)"></div>AVG performance</div></div>
+                <button class="dlbtn" onclick="dlChart('pf-chart','Performance_Trend')">⬇ PNG</button>
+              </div>
+            </div>
+            <div class="h185"><canvas id="pf-chart"></canvas></div>
+          </div>
+        </div>
+      </div>
+      <!-- Production vs Plan + Machine Status -->
+      <div class="g1 g21">
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,var(--cyan),var(--green))"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></div>PRODUCTION vs PLAN</div>
+            <div class="cact">
+              <div class="legrow"><div class="leg"><div class="legline" style="background:var(--cyan)"></div>SUM(plan_qty)</div><div class="leg"><div class="legline" style="background:var(--green)"></div>SUM(actual_qty)</div></div>
+              <button class="dlbtn" onclick="dlChart('prod-chart','Production_vs_Plan')">⬇ PNG</button>
+              <button class="dlbtn csv" onclick="dlCSV(window._oeeData,'OEE_Data')">⬇ CSV</button>
+            </div>
+          </div>
+          <div class="h185"><canvas id="prod-chart"></canvas></div>
+        </div>
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,var(--cyan),var(--purple))"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></div>MACHINE STATUS TABLE</div>
+            <div class="cact"><button class="dlbtn csv" onclick="dlCSV(window._oeeData,'Machine_Status')">⬇ CSV</button></div>
+          </div>
+          <div class="twrap" style="max-height:250px">
+            <table class="tbl"><thead><tr><th onclick="sortTbl('oee-tbody',0)">line_name</th><th onclick="sortTbl('oee-tbody',1)">line_status</th><th onclick="sortTbl('oee-tbody',2)">actual_qty</th><th>Progress</th></tr></thead>
+            <tbody id="oee-tbody"><tr><td colspan="4" class="skeleton" style="height:30px"></td></tr></tbody></table>
+          </div>
+          <div class="trinfo" id="oee-info">Loading…</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ DOWNTIME ════════════════════════════════ -->
+  <div class="page" id="page-downtime">
+    <div class="fstrip">
+      <span class="flbl">Shift</span>
+      <button class="fbtn active" onclick="dtFilter('all')">All</button>
+      <button class="fbtn" onclick="dtFilter('A')">Shift A</button>
+      <button class="fbtn" onclick="dtFilter('B')">Shift B</button>
+      <button class="fbtn" onclick="dtFilter('C')">Shift C</button>
+      <div class="flive"><div class="ldot"></div><span id="dt-count">Loading…</span></div>
+    </div>
+    <div class="pgwrap">
+      <div class="g1 g4">
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--red),#c0392b)"></div><span class="ktag">// Total Downtime</span><div class="knum" style="font-size:32px;color:var(--red);margin-top:5px" id="dt-total">--</div><div class="kunit">SUM(duration_minutes)</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--amber),#d97706)"></div><span class="ktag">// Machines</span><div class="knum" style="font-size:32px;color:var(--amber);margin-top:5px" id="dt-machines">--</div><div class="kunit">Unique machines</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--cyan),#0097a7)"></div><span class="ktag">// AVG Duration</span><div class="knum" style="font-size:32px;color:var(--cyan);margin-top:5px" id="dt-avg">--</div><div class="kunit">min per event</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--purple),#7c3aed)"></div><span class="ktag">// Total Events</span><div class="knum" style="font-size:32px;color:var(--purple);margin-top:5px" id="dt-events">--</div><div class="kunit">Downtime records</div></div>
+      </div>
+      <!-- Downtime log table -->
+      <div class="card" style="padding:14px 16px">
+        <div class="ca" style="background:linear-gradient(90deg,var(--red),var(--amber))"></div>
+        <div class="ch">
+          <div class="ct"><div class="cdot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div>DOWNTIME LOG</div>
+          <div class="cact">
+            <input id="dt-search" placeholder="Search machine / issue…" style="font-family:'Space Mono',monospace;font-size:9px;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:1px;color:var(--text);padding:3px 8px;outline:none;width:180px" oninput="dtSearch(this.value)">
+            <button class="dlbtn csv" onclick="dlCSV(window._dtData,'Downtime_Events')">⬇ CSV</button>
+          </div>
+        </div>
+        <div class="twrap" style="max-height:300px">
+          <table class="tbl"><thead><tr><th onclick="sortTbl('dt-tbody',0)">shift_date</th><th onclick="sortTbl('dt-tbody',1)">shift_name</th><th onclick="sortTbl('dt-tbody',2)">shift_code</th><th onclick="sortTbl('dt-tbody',3)">machine_name</th><th>issue_description</th><th onclick="sortTbl('dt-tbody',5)">duration_minutes</th><th onclick="sortTbl('dt-tbody',6)">production_impact</th></tr></thead>
+          <tbody id="dt-tbody"><tr><td colspan="7" class="skeleton" style="height:30px"></td></tr></tbody></table>
+        </div>
+        <div class="trinfo" id="dt-info">Loading…</div>
+      </div>
+      <!-- Distribution + By Machine -->
+      <div class="g1 g21">
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,var(--purple),#7c3aed)"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:var(--purple);box-shadow:0 0 5px var(--purple)"></div>DOWNTIME DISTRIBUTION</div>
+            <div class="cact"><button class="dlbtn" onclick="dlChart('dt-dist','Downtime_Distribution')">⬇ PNG</button></div>
+          </div>
+          <div class="h210"><canvas id="dt-dist"></canvas></div>
+        </div>
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,var(--cyan),#0097a7)"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></div>DOWNTIME BY MACHINE</div>
+            <div class="cact">
+              <div class="legrow"><div class="leg"><div class="legline" style="background:rgba(100,160,255,.9)"></div>SUM(duration_minutes)</div></div>
+              <button class="dlbtn" onclick="dlChart('dt-machine','Downtime_By_Machine')">⬇ PNG</button>
+              <button class="dlbtn csv" onclick="dlCSV(window._dtByMachine,'Downtime_By_Machine')">⬇ CSV</button>
+            </div>
+          </div>
+          <div class="h210"><canvas id="dt-machine"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ QUALITY ══════════════════════════════════ -->
+  <div class="page" id="page-quality">
+    <div class="fstrip">
+      <span class="flbl">Status</span>
+      <button class="fbtn active" onclick="qlFilter('all')">All</button>
+      <button class="fbtn" onclick="qlFilter('CRITICAL')">Critical</button>
+      <button class="fbtn" onclick="qlFilter('OK')">OK</button>
+      <div class="flive"><div class="ldot"></div><span id="ql-count">Loading…</span></div>
+    </div>
+    <div class="pgwrap">
+      <div class="g1 g4">
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--red),#c0392b)"></div><span class="ktag">// AVG Rejection Rate</span><div class="knum" style="font-size:32px;color:var(--red);margin-top:5px" id="ql-avg-rate">--</div><div class="kunit">AVG(rejection_rate)</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--amber),#d97706)"></div><span class="ktag">// Critical Shifts</span><div class="knum" style="font-size:32px;color:var(--amber);margin-top:5px" id="ql-critical">--</div><div class="kunit">Rejection > threshold</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--cyan),#0097a7)"></div><span class="ktag">// Max Rejection</span><div class="knum" style="font-size:32px;color:var(--cyan);margin-top:5px" id="ql-max">--</div><div class="kunit">Highest rate seen</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--green),#1dcf7a)"></div><span class="ktag">// Total Defect Units</span><div class="knum" style="font-size:32px;color:var(--green);margin-top:5px" id="ql-defects-total">--</div><div class="kunit">SUM(defect_units)</div></div>
+      </div>
+      <!-- Critical shifts table + gauge -->
+      <div class="g1 g21">
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,var(--red),var(--amber))"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:var(--red);box-shadow:0 0 5px var(--red)"></div>CRITICAL SHIFTS TABLE</div>
+            <div class="cact">
+              <input id="ql-search" placeholder="Search date / defect…" style="font-family:'Space Mono',monospace;font-size:9px;background:rgba(255,255,255,.04);border:1px solid var(--border2);border-radius:1px;color:var(--text);padding:3px 8px;outline:none;width:160px" oninput="qlSearch(this.value)">
+              <button class="dlbtn csv" onclick="dlCSV(window._qlData,'Quality_Defects')">⬇ CSV</button>
+            </div>
+          </div>
+          <div class="twrap" style="max-height:300px">
+            <table class="tbl"><thead><tr><th onclick="sortTbl('ql-tbody',0)">shift_date</th><th onclick="sortTbl('ql-tbody',1)">shift_name</th><th onclick="sortTbl('ql-tbody',2)">rejection_rate</th><th onclick="sortTbl('ql-tbody',3)">threshold_limit</th><th onclick="sortTbl('ql-tbody',4)">quality_status</th><th onclick="sortTbl('ql-tbody',5)">major_defect</th><th onclick="sortTbl('ql-tbody',6)">defect_units</th></tr></thead>
+            <tbody id="ql-tbody"><tr><td colspan="7" class="skeleton" style="height:30px"></td></tr></tbody></table>
+          </div>
+          <div class="trinfo" id="ql-info">Loading…</div>
+        </div>
+        <!-- Rejection Rate Gauge -->
+        <div class="card" style="padding:14px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div class="ca" style="background:linear-gradient(90deg,var(--purple),#7c3aed)"></div>
+          <div class="ct" style="align-self:flex-start;margin-bottom:10px"><div class="cdot" style="background:var(--purple);box-shadow:0 0 5px var(--purple)"></div>REJECTION RATE</div>
+          <div style="position:relative;width:190px;height:105px"><canvas id="ql-gauge"></canvas></div>
+          <div style="font-family:'Orbitron',monospace;font-size:28px;font-weight:900;color:rgba(100,140,255,.95);margin-top:4px" id="ql-gauge-num">--</div>
+          <div style="font-size:8px;color:var(--muted);font-family:'Space Mono',monospace;letter-spacing:.1em;margin-bottom:8px">AVG REJECTION RATE %</div>
+          <div style="display:flex;justify-content:space-between;width:100%;font-size:8px;color:var(--muted);font-family:'Space Mono',monospace" id="ql-gauge-scale"></div>
+          <button class="dlbtn" style="margin-top:8px" onclick="dlChart('ql-gauge','Rejection_Rate_Gauge')">⬇ PNG</button>
+        </div>
+      </div>
+      <!-- Top Defects chart -->
+      <div class="card" style="padding:14px 16px">
+        <div class="ca" style="background:linear-gradient(90deg,var(--cyan),var(--green))"></div>
+        <div class="ch">
+          <div class="ct"><div class="cdot" style="background:var(--cyan);box-shadow:0 0 5px var(--cyan)"></div>TOP DEFECTS — SUM(defect_units) by major_defect</div>
+          <div class="cact">
+            <div class="legrow"><div class="leg"><div class="legline" style="background:rgba(0,210,230,.9)"></div>SUM(defect_units)</div></div>
+            <button class="dlbtn" onclick="dlChart('ql-defects','Top_Defects')">⬇ PNG</button>
+            <button class="dlbtn csv" onclick="dlCSV(window._qlDefectData,'Top_Defects')">⬇ CSV</button>
+          </div>
+        </div>
+        <div class="h185"><canvas id="ql-defects"></canvas></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ENERGY ════════════════════════════════════ -->
+  <div class="page" id="page-energy">
+    <div class="fstrip">
+      <span class="flbl">Status</span>
+      <button class="fbtn active" onclick="enFilter('all')">All</button>
+      <button class="fbtn" onclick="enFilter('OVER')">Over Baseline</button>
+      <button class="fbtn" onclick="enFilter('NORMAL')">Normal</button>
+      <div class="flive"><div class="ldot"></div><span id="en-count">Loading…</span></div>
+    </div>
+    <div class="pgwrap">
+      <div class="g1 g4">
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--cyan),#0097a7)"></div><span class="ktag">// AVG Consumption</span><div class="knum" style="font-size:32px;color:var(--cyan);margin-top:5px" id="en-avg">--</div><div class="kunit">AVG(total_consumption) kWh</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--green),#1dcf7a)"></div><span class="ktag">// AVG Energy/Unit</span><div class="knum" style="font-size:32px;color:var(--green);margin-top:5px" id="en-epu">--</div><div class="kunit">AVG(energy_per_unit) kWh</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--amber),#d97706)"></div><span class="ktag">// Total Alerts</span><div class="knum" style="font-size:32px;color:var(--amber);margin-top:5px" id="en-alerts">--</div><div class="kunit">SUM(abnormal_alert)</div></div>
+        <div class="card kc"><div class="ca" style="background:linear-gradient(90deg,var(--red),#c0392b)"></div><span class="ktag">// Over Baseline</span><div class="knum" style="font-size:32px;color:var(--red);margin-top:5px" id="en-over">--</div><div class="kunit">Shifts over baseline_target</div></div>
+      </div>
+      <!-- Consumption over time + Energy per unit KPI -->
+      <div class="g1 g21">
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,#ff6b6b,#c0392b)"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:#ff6b6b;box-shadow:0 0 5px #ff6b6b"></div>CONSUMPTION OVER TIME</div>
+            <div class="cact">
+              <div class="legrow"><div class="leg"><div class="legline" style="background:#ff6b6b"></div>AVG(total_consumption)</div></div>
+              <button class="dlbtn" onclick="dlChart('en-trend','Consumption_Over_Time')">⬇ PNG</button>
+            </div>
+          </div>
+          <div class="h210"><canvas id="en-trend"></canvas></div>
+        </div>
+        <div class="card" style="padding:14px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div class="ca" style="background:linear-gradient(90deg,var(--green),#1dcf7a)"></div>
+          <div class="ct" style="align-self:flex-start;margin-bottom:12px"><div class="cdot" style="background:var(--green);box-shadow:0 0 5px var(--green)"></div>ENERGY PER UNIT</div>
+          <div style="font-family:'Orbitron',monospace;font-size:64px;font-weight:900;color:var(--green);line-height:1;text-shadow:0 0 26px rgba(57,255,138,.3)" id="en-epu-big">--</div>
+          <div style="font-size:13px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-top:10px">Energy Per Unit</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:3px">AVG kWh per unit</div>
+        </div>
+      </div>
+      <!-- Alert count + Baseline vs Actual -->
+      <div class="g1 g12">
+        <div class="card" style="padding:14px 16px;display:flex;flex-direction:column;align-items:center;justify-content:center">
+          <div class="ca" style="background:linear-gradient(90deg,var(--amber),#d97706)"></div>
+          <div class="ct" style="align-self:flex-start;margin-bottom:12px"><div class="cdot" style="background:var(--amber);box-shadow:0 0 5px var(--amber)"></div>ALERT COUNT</div>
+          <div style="font-family:'Orbitron',monospace;font-size:64px;font-weight:900;color:var(--amber);line-height:1;text-shadow:0 0 26px rgba(245,166,35,.3)" id="en-alert-big">--</div>
+          <div style="font-size:13px;color:var(--muted);font-family:'DM Sans',sans-serif;margin-top:10px">Total Alert Count</div>
+          <div style="font-size:9px;color:var(--muted);font-family:'Space Mono',monospace;margin-top:3px">SUM(abnormal_alert)</div>
+        </div>
+        <div class="card" style="padding:14px 16px">
+          <div class="ca" style="background:linear-gradient(90deg,#ff6b6b,var(--purple))"></div>
+          <div class="ch">
+            <div class="ct"><div class="cdot" style="background:#ff6b6b;box-shadow:0 0 5px #ff6b6b"></div>BASELINE vs ACTUAL — by shift_date</div>
+            <div class="cact">
+              <div class="legrow"><div class="leg"><div class="legline" style="background:#ff6b6b"></div>SUM(baseline_target)</div><div class="leg"><div class="legline" style="background:rgba(110,80,200,.9)"></div>SUM(energy_per_unit)</div></div>
+              <button class="dlbtn" onclick="dlChart('en-baseline','Baseline_vs_Actual')">⬇ PNG</button>
+              <button class="dlbtn csv" onclick="dlCSV(window._enData,'Energy_Summary')">⬇ CSV</button>
+            </div>
+          </div>
+          <div class="h210"><canvas id="en-baseline"></canvas></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /content-area -->
+</main>
+
+<script>
+// ══ CONFIG ══════════════════════════════════════════
+const API = 'http://127.0.0.1:5000';
+const SUPERSET_URL = 'http://localhost:8088';
+const DASH_IDS = {oee:'8',downtime:'2',quality:'10',energy:'9'};
+const USERS = {admin:{password:'admin123',display:'Admin',initials:'AD'},viewer:{password:'view123',display:'Viewer',initials:'VW'}};
+const PAGE_META = {
+  oee:      ['OEE Overview',      'OEE Master View — live from database'],
+  downtime: ['Machine Downtime',  'Downtime Events — live from database'],
+  quality:  ['Quality Dashboard', 'Quality & Defects — live from database'],
+  energy:   ['Energy Dashboard',  'Energy Summary — live from database'],
+};
+
+// Stored raw data
+window._oeeData = []; window._dtData = []; window._qlData = []; window._enData = [];
+window._dtByMachine = []; window._qlDefectData = [];
+let currentPage = 'oee';
+let charts = {}; // chart instances keyed by canvas id
+
+// ══ CHART BASE ══════════════════════════════════════
+const B = {
+  responsive:true, maintainAspectRatio:false,
+  plugins:{legend:{display:false},tooltip:{backgroundColor:'#0c1118',titleColor:'#00e5ff',bodyColor:'#d8e8f8',borderColor:'rgba(255,255,255,.07)',borderWidth:1,cornerRadius:2,padding:9,titleFont:{family:"'Space Mono',monospace",size:9},bodyFont:{family:"'DM Sans',sans-serif",size:11}}},
+  scales:{x:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#3a5570',font:{size:8,family:"'Space Mono',monospace"},maxTicksLimit:8}},y:{grid:{color:'rgba(255,255,255,.03)'},ticks:{color:'#3a5570',font:{size:8,family:"'Space Mono',monospace"},maxTicksLimit:5}}},
+  animation:{duration:700,easing:'easeInOutQuart'}
+};
+function makeChart(id, type, data, opts) {
+  if (charts[id]) { charts[id].destroy(); delete charts[id]; }
+  const el = document.getElementById(id);
+  if (!el) return;
+  charts[id] = new Chart(el, {type, data, options: deepMerge(B, opts || {})});
+  return charts[id];
+}
+function deepMerge(a, b) {
+  const r = Object.assign({}, a);
+  for (const k in b) {
+    r[k] = (b[k] && typeof b[k]==='object' && !Array.isArray(b[k]) && a[k]) ? deepMerge(a[k], b[k]) : b[k];
+  }
+  return r;
+}
+function G(ctx, c1, c2, h=200) {
+  const g = ctx.createLinearGradient(0,0,0,h); g.addColorStop(0,c1); g.addColorStop(1,c2); return g;
+}
+
+// ══ UTILITIES ═══════════════════════════════════════
+function fmt(n, dec=1) { return n==null ? '--' : Number(n).toFixed(dec); }
+function fmtK(n) { if (n==null) return '--'; n=Number(n); return n>=1e6?(n/1e6).toFixed(2)+'M':n>=1000?(n/1000).toFixed(1)+'k':Math.round(n).toString(); }
+function groupBy(arr, key) {
+  return arr.reduce((m,r) => { const k=r[key]||'Unknown'; m[k]=(m[k]||[]).concat(r); return m; }, {});
+}
+function avg(arr) { return arr.length ? arr.reduce((s,v)=>s+v,0)/arr.length : 0; }
+function sum(arr) { return arr.reduce((s,v)=>s+v,0); }
+function uniq(arr) { return [...new Set(arr)]; }
+function ymd(d) { return d ? d.slice(0,10) : ''; }
+
+// ══ STATUS BANNER ════════════════════════════════════
+function showSt(type,msg,auto=true){
+  const el=document.getElementById('sb');
+  document.getElementById('sm').textContent=msg;
+  el.className='show '+type;
+  document.getElementById('sp').style.display=type==='loading'?'block':'none';
+  if(auto&&type!=='loading')setTimeout(()=>el.className='',4000);
+}
+function hideSt(){document.getElementById('sb').className='';}
+
+// ══ FETCH ════════════════════════════════════════════
+async function apiFetch(endpoint) {
+  const r = await fetch(`${API}${endpoint}`);
+  if (!r.ok) { const e=await r.json().catch(()=>({error:r.statusText})); throw new Error(e.error||r.statusText); }
+  return r.json();
+}
+
+// ══ CLOCK ════════════════════════════════════════════
+function updateShift(){
+  const n=new Date(),h=n.getHours();
+  document.getElementById('shiftval').textContent=h>=6&&h<14?'Shift A':h>=14&&h<22?'Shift B':'Shift C';
+  document.getElementById('shifttime').textContent=n.toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit',second:'2-digit'})+' · '+n.toLocaleDateString('en-GB',{day:'2-digit',month:'short',year:'numeric'});
+}
+updateShift(); setInterval(updateShift,1000);
+
+// ══ DOWNLOAD ════════════════════════════════════════
+function dlChart(id,name){
+  const c=document.getElementById(id); if(!c)return;
+  const tmp=document.createElement('canvas'); tmp.width=c.width; tmp.height=c.height;
+  const ctx=tmp.getContext('2d'); ctx.fillStyle='#0c1118'; ctx.fillRect(0,0,tmp.width,tmp.height); ctx.drawImage(c,0,0);
+  const a=document.createElement('a'); a.href=tmp.toDataURL('image/png'); a.download=`${name}_${new Date().toISOString().slice(0,10)}.png`; a.click();
+}
+function dlCSV(data,name){
+  if(!data||!data.length)return;
+  const hdr=Object.keys(data[0]);
+  const rows=[hdr.join(','),...data.map(r=>hdr.map(h=>{const v=r[h];return typeof v==='string'&&(v.includes(',')||v.includes('"'))?`"${v.replace(/"/g,'""')}"`:v??''}).join(','))];
+  const a=document.createElement('a'); a.href=URL.createObjectURL(new Blob([rows.join('\n')],{type:'text/csv'})); a.download=`${name}_${new Date().toISOString().slice(0,10)}.csv`; a.click(); URL.revokeObjectURL(a.href);
+}
+
+// ══ TABLE SORT ══════════════════════════════════════
+let sortState = {};
+function sortTbl(tbodyId, colIdx) {
+  const key = `${tbodyId}-${colIdx}`;
+  const asc = !(sortState[key]);
+  sortState[key] = asc;
+  const tbody = document.getElementById(tbodyId);
+  if (!tbody) return;
+  const rows = [...tbody.querySelectorAll('tr')];
+  rows.sort((a,b) => {
+    const av = a.cells[colIdx]?.textContent.trim()||'';
+    const bv = b.cells[colIdx]?.textContent.trim()||'';
+    const an=parseFloat(av), bn=parseFloat(bv);
+    if(!isNaN(an)&&!isNaN(bn)) return asc?an-bn:bn-an;
+    return asc?av.localeCompare(bv):bv.localeCompare(av);
+  });
+  rows.forEach(r=>tbody.appendChild(r));
+}
+
+// ══ OEE PAGE ════════════════════════════════════════
+let oeeChart_av=null, oeeChart_pf=null, oeeChart_prod=null, oeeChart_gauge=null;
+let oeeFilter_val='all';
+
+async function loadOEE(){
+  showSt('loading','// Loading OEE data…',false);
+  try {
+    const {data} = await apiFetch('/api/data/oee');
+    window._oeeData = data;
+    renderOEE(data);
+    hideSt();
+  } catch(e) { showSt('error','// '+e.message); }
+}
+
+function oeeFilter(val){
+  oeeFilter_val=val;
+  document.querySelectorAll('.fbtn[id^="oee-f-"]').forEach(b=>b.classList.remove('active'));
+  document.getElementById('oee-f-'+val)?.classList.add('active');
+  renderOEE(window._oeeData);
+}
+
+function renderOEE(raw){
+  const data = oeeFilter_val==='all' ? raw : raw.filter(r=>r.shift_code===oeeFilter_val);
+  document.getElementById('oee-count').textContent=`${data.length} records`;
+
+  // KPIs
+  const avgOEE  = avg(data.map(r=>Number(r.oee_score)||0));
+  const avgAvail = avg(data.map(r=>Number(r.availability)||0));
+  const avgPerf  = avg(data.map(r=>Number(r.performance)||0));
+  const avgQual  = avg(data.map(r=>Number(r.quality)||0));
+
+  document.getElementById('oee-score-num').textContent = fmt(avgOEE)+'%';
+  document.getElementById('oee-gauge-num').textContent  = fmt(avgOEE);
+  document.getElementById('oee-avail').textContent = fmt(avgAvail)+'%';
+  document.getElementById('oee-perf').textContent  = fmt(avgPerf)+'%';
+  document.getElementById('oee-qual').textContent  = fmt(avgQual)+'%';
+  document.getElementById('oee-progress-bar').style.width = Math.min(avgOEE,100)+'%';
+  const badge = document.getElementById('oee-status-badge');
+  if(avgOEE>=75){badge.textContent='ON TARGET';badge.className='badge bg';}
+  else{badge.textContent='BELOW TARGET';badge.className='badge by';}
+
+  // Gauge
+  const pct = Math.min(Math.max(avgOEE,0),100);
+  makeChart('oee-gauge','doughnut',{datasets:[{data:[pct,100-pct],backgroundColor:['rgba(245,166,35,.85)','rgba(255,255,255,.04)'],borderColor:['#f5a623','transparent'],borderWidth:[2,0],circumference:180,rotation:270}]},{cutout:'68%',plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}});
+
+  // Availability trend — group by date, avg availability
+  const byDate = groupBy(data.filter(r=>r.shift_date), 'shift_date');
+  const dates = Object.keys(byDate).sort().slice(-30); // last 30 dates
+  const avData = dates.map(d=>avg(byDate[d].map(r=>Number(r.availability)||0)));
+  const pfData = dates.map(d=>avg(byDate[d].map(r=>Number(r.performance)||0)));
+  const labels = dates.map(d=>ymd(d));
+
+  const avEl = document.getElementById('av-chart');
+  if(avEl){const ag=G(avEl.getContext('2d'),'rgba(57,255,138,.18)','rgba(57,255,138,0)'); makeChart('av-chart','line',{labels,datasets:[{data:avData,borderColor:'#39ff8a',backgroundColor:ag,fill:true,borderWidth:2,pointRadius:0,tension:.4}]},{scales:{x:{ticks:{maxTicksLimit:7}},y:{min:0,max:100}}});}
+  const pfEl = document.getElementById('pf-chart');
+  if(pfEl){const pg=G(pfEl.getContext('2d'),'rgba(167,139,250,.18)','rgba(167,139,250,0)'); makeChart('pf-chart','line',{labels,datasets:[{data:pfData,borderColor:'#a78bfa',backgroundColor:pg,fill:true,borderWidth:2,pointRadius:0,tension:.4}]},{scales:{x:{ticks:{maxTicksLimit:7}},y:{min:0,max:100}}});}
+
+  // Production vs Plan — group by line_name
+  const byLine = groupBy(data.filter(r=>r.line_name), 'line_name');
+  const lines = Object.keys(byLine).sort();
+  const planData   = lines.map(l=>sum(byLine[l].map(r=>Number(r.plan_qty)||0)));
+  const actualData = lines.map(l=>sum(byLine[l].map(r=>Number(r.actual_qty)||0)));
+  makeChart('prod-chart','bar',{labels:lines,datasets:[
+    {label:'SUM(plan_qty)',  data:planData,  backgroundColor:'rgba(0,229,255,.35)',borderColor:'rgba(0,229,255,.8)',borderWidth:1,borderRadius:2,barPercentage:.7},
+    {label:'SUM(actual_qty)',data:actualData,backgroundColor:'rgba(57,255,138,.35)',borderColor:'rgba(57,255,138,.8)',borderWidth:1,borderRadius:2,barPercentage:.7}
+  ]},{plugins:{legend:{display:true,labels:{color:'#3a5570',font:{size:8,family:"'Space Mono',monospace"},boxWidth:8,padding:10}}},scales:{y:{ticks:{callback:v=>v>=1e6?(v/1e6).toFixed(1)+'M':fmtK(v)}}}});
+
+  // Machine Status Table — latest row per line
+  const latestByLine = {};
+  data.filter(r=>r.line_name).forEach(r=>{
+    const k=r.line_name;
+    if(!latestByLine[k]||r.shift_date>latestByLine[k].shift_date) latestByLine[k]=r;
+  });
+  const tableRows = Object.values(latestByLine);
+  const tbody = document.getElementById('oee-tbody');
+  tbody.innerHTML='';
+  tableRows.forEach(r=>{
+    const st=r.line_status||'UNKNOWN';
+    const cls=st==='OK'||st==='Running'?'s-ok':st==='DELAY'||st==='Slow'?'s-delay':'s-stop';
+    const pct=Math.min(Math.round((Number(r.actual_qty)||0)/(Number(r.plan_qty)||1)*100),100);
+    const bc=cls==='s-ok'?'var(--green)':cls==='s-delay'?'var(--amber)':'var(--red)';
+    tbody.innerHTML+=`<tr><td class="lnm">${r.line_name}</td><td><span class="sbadge ${cls}">${st}</span></td><td style="font-weight:700;color:#e0eaff">${Number(r.actual_qty||0).toLocaleString()}</td><td><span style="font-size:8px;color:var(--muted)">${pct}%</span><span class="mbg"><span class="mbf" style="width:${pct}%;background:${bc}"></span></span></td></tr>`;
+  });
+  document.getElementById('oee-info').textContent=`// ${tableRows.length} lines · ${data.length} total records`;
+}
+
+// ══ DOWNTIME PAGE ════════════════════════════════════
+let dtFilter_val='all', dtSearch_val='';
+async function loadDowntime(){
+  showSt('loading','// Loading Downtime data…',false);
+  try {
+    const {data} = await apiFetch('/api/data/downtime');
+    window._dtData = data;
+    renderDowntime(data);
+    hideSt();
+  } catch(e){ showSt('error','// '+e.message); }
+}
+
+function dtFilter(val){
+  dtFilter_val=val;
+  document.querySelectorAll('#page-downtime .fstrip .fbtn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderDowntime(window._dtData);
+}
+function dtSearch(v){ dtSearch_val=v.toLowerCase(); renderDowntime(window._dtData); }
+
+function renderDowntime(raw){
+  let data = dtFilter_val==='all' ? raw : raw.filter(r=>r.shift_code===dtFilter_val);
+  document.getElementById('dt-count').textContent=`${data.length} records`;
+
+  // KPIs
+  const total = sum(data.map(r=>Number(r.duration_minutes)||0));
+  const machines = uniq(data.map(r=>r.machine_name).filter(Boolean));
+  const avgDur = data.length ? total/data.length : 0;
+  document.getElementById('dt-total').textContent    = fmtK(total);
+  document.getElementById('dt-machines').textContent = machines.length;
+  document.getElementById('dt-avg').textContent      = fmt(avgDur,0);
+  document.getElementById('dt-events').textContent   = fmtK(data.length);
+
+  // Table (with search filter)
+  const search = dtSearch_val;
+  const filtered = search ? data.filter(r=>(r.machine_name||'').toLowerCase().includes(search)||(r.issue_description||'').toLowerCase().includes(search)) : data;
+  const tbody = document.getElementById('dt-tbody');
+  tbody.innerHTML='';
+  filtered.slice(0,500).forEach(r=>{
+    tbody.innerHTML+=`<tr><td>${ymd(r.shift_date)}</td><td>${r.shift_name||''}</td><td>${r.shift_code||''}</td><td class="lnm">${r.machine_name||''}</td><td style="max-width:240px;overflow:hidden;text-overflow:ellipsis" title="${(r.issue_description||'').replace(/"/g,'&quot;')}">${r.issue_description||''}</td><td style="color:var(--amber);font-weight:700">${r.duration_minutes||0}</td><td style="color:var(--cyan)">${r.production_impact||0}</td></tr>`;
+  });
+  document.getElementById('dt-info').textContent=`// Showing ${Math.min(filtered.length,500)} of ${filtered.length} records · Download CSV for all`;
+
+  // By Machine — SUM(duration_minutes)
+  const byM = groupBy(data.filter(r=>r.machine_name),'machine_name');
+  const mNames = Object.keys(byM).sort((a,b)=>sum(byM[b].map(r=>Number(r.duration_minutes)||0))-sum(byM[a].map(r=>Number(r.duration_minutes)||0)));
+  const mSums  = mNames.map(m=>sum(byM[m].map(r=>Number(r.duration_minutes)||0)));
+  window._dtByMachine = mNames.map((m,i)=>({machine_name:m,total_duration:mSums[i]}));
+
+  // Distribution pie
+  const COLS=['rgba(0,229,255,.72)','rgba(57,255,138,.72)','rgba(245,166,35,.72)','rgba(167,139,250,.72)','rgba(255,59,92,.72)','rgba(0,180,200,.65)','rgba(100,200,120,.65)','rgba(255,150,50,.65)','rgba(180,130,255,.65)','rgba(80,200,200,.65)'];
+  makeChart('dt-dist','doughnut',{labels:mNames,datasets:[{data:mSums,backgroundColor:mNames.map((_,i)=>COLS[i%COLS.length]),borderColor:'rgba(5,7,9,.8)',borderWidth:2,hoverOffset:7}]},{cutout:'35%',plugins:{legend:{display:true,position:'right',labels:{color:'#3a5570',font:{size:8,family:"'Space Mono',monospace"},boxWidth:8,padding:6}}},scales:{x:{display:false},y:{display:false}}});
+
+  // By Machine bar
+  const mEl = document.getElementById('dt-machine');
+  if(mEl){const mg=G(mEl.getContext('2d'),'rgba(80,130,220,.72)','rgba(80,130,220,.3)'); makeChart('dt-machine','bar',{labels:mNames,datasets:[{label:'SUM(duration_minutes)',data:mSums,backgroundColor:mg,borderColor:'rgba(100,150,230,.9)',borderWidth:1,borderRadius:2}]},{scales:{y:{ticks:{callback:v=>fmtK(v)}}}});}
+}
+
+// ══ QUALITY PAGE ═════════════════════════════════════
+let qlFilter_val='all', qlSearch_val='';
+async function loadQuality(){
+  showSt('loading','// Loading Quality data…',false);
+  try {
+    const {data} = await apiFetch('/api/data/quality');
+    window._qlData = data;
+    renderQuality(data);
+    hideSt();
+  } catch(e){ showSt('error','// '+e.message); }
+}
+
+function qlFilter(val){
+  qlFilter_val=val;
+  document.querySelectorAll('#page-quality .fstrip .fbtn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderQuality(window._qlData);
+}
+function qlSearch(v){ qlSearch_val=v.toLowerCase(); renderQuality(window._qlData); }
+
+function renderQuality(raw){
+  let data = qlFilter_val==='all' ? raw : raw.filter(r=>r.quality_status===qlFilter_val);
+  document.getElementById('ql-count').textContent=`${data.length} records`;
+
+  const rates = data.map(r=>Number(r.rejection_rate)||0);
+  const avgRate  = avg(rates);
+  const maxRate  = Math.max(...rates, 0);
+  const critical = data.filter(r=>r.quality_status==='CRITICAL').length;
+  const totalDef = sum(data.map(r=>Number(r.defect_units)||0));
+
+  document.getElementById('ql-avg-rate').textContent      = fmt(avgRate,2)+'%';
+  document.getElementById('ql-critical').textContent      = critical.toLocaleString();
+  document.getElementById('ql-max').textContent           = fmt(maxRate,2)+'%';
+  document.getElementById('ql-defects-total').textContent = fmtK(totalDef);
+  document.getElementById('ql-gauge-num').textContent     = fmt(avgRate,2);
+
+  // Gauge
+  const maxR = Math.max(maxRate, 6);
+  const scale = [0, +(maxR*0.2).toFixed(2), +(maxR*0.4).toFixed(2), +(maxR*0.6).toFixed(2), +(avgRate).toFixed(2), +(maxR*0.8).toFixed(2), +maxR.toFixed(2)];
+  document.getElementById('ql-gauge-scale').innerHTML = scale.map((v,i)=>`<span${i===4?' style="color:rgba(100,140,255,.9)"':''}>${v}</span>`).join('');
+  makeChart('ql-gauge','doughnut',{datasets:[{data:[avgRate, maxR-avgRate],backgroundColor:['rgba(80,120,240,.85)','rgba(200,210,255,.08)'],borderColor:['rgba(100,140,255,.9)','transparent'],borderWidth:[2,0],circumference:180,rotation:270}]},{cutout:'68%',plugins:{legend:{display:false}},scales:{x:{display:false},y:{display:false}}});
+
+  // Table
+  const search = qlSearch_val;
+  const filtered = search ? data.filter(r=>(ymd(r.shift_date)).includes(search)||(r.major_defect||'').toLowerCase().includes(search)||(r.quality_status||'').toLowerCase().includes(search)) : data;
+  const tbody = document.getElementById('ql-tbody');
+  tbody.innerHTML='';
+  filtered.slice(0,500).forEach(r=>{
+    const cls=r.quality_status==='CRITICAL'?'s-crit':'s-norm';
+    tbody.innerHTML+=`<tr><td>${ymd(r.shift_date)}</td><td>${r.shift_name||''}</td><td style="color:${r.quality_status==='CRITICAL'?'var(--red)':'var(--green)'};font-weight:700">${fmt(Number(r.rejection_rate),4)}</td><td>${fmt(Number(r.threshold_limit),1)}</td><td><span class="sbadge ${cls}">${r.quality_status||''}</span></td><td>${r.major_defect||''}</td><td style="color:var(--amber)">${r.defect_units||0}</td></tr>`;
+  });
+  document.getElementById('ql-info').textContent=`// Showing ${Math.min(filtered.length,500)} of ${filtered.length} records`;
+
+  // Top Defects by major_defect — SUM(defect_units)
+  const byDefect = groupBy(data.filter(r=>r.major_defect&&r.major_defect!=='None'), 'major_defect');
+  const defNames = Object.keys(byDefect).sort((a,b)=>sum(byDefect[b].map(r=>Number(r.defect_units)||0))-sum(byDefect[a].map(r=>Number(r.defect_units)||0))).slice(0,15);
+  const defSums  = defNames.map(d=>sum(byDefect[d].map(r=>Number(r.defect_units)||0)));
+  window._qlDefectData = defNames.map((d,i)=>({major_defect:d,total_defect_units:defSums[i]}));
+
+  const defEl = document.getElementById('ql-defects');
+  if(defEl){const dg=G(defEl.getContext('2d'),'rgba(0,210,230,.6)','rgba(0,210,230,.15)'); makeChart('ql-defects','bar',{labels:defNames,datasets:[{label:'SUM(defect_units)',data:defSums,backgroundColor:dg,borderColor:'rgba(0,210,230,.8)',borderWidth:1,borderRadius:2}]},{scales:{y:{ticks:{callback:v=>fmtK(v)}}}});}
+}
+
+// ══ ENERGY PAGE ══════════════════════════════════════
+let enFilter_val='all';
+async function loadEnergy(){
+  showSt('loading','// Loading Energy data…',false);
+  try {
+    const {data} = await apiFetch('/api/data/energy');
+    window._enData = data;
+    renderEnergy(data);
+    hideSt();
+  } catch(e){ showSt('error','// '+e.message); }
+}
+
+function enFilter(val){
+  enFilter_val=val;
+  document.querySelectorAll('#page-energy .fstrip .fbtn').forEach(b=>b.classList.remove('active'));
+  event.target.classList.add('active');
+  renderEnergy(window._enData);
+}
+
+function renderEnergy(raw){
+  let data = enFilter_val==='all' ? raw : raw.filter(r=>r.energy_status===enFilter_val);
+  document.getElementById('en-count').textContent=`${data.length} records`;
+
+  const avgCons  = avg(data.map(r=>Number(r.total_consumption)||0));
+  const avgEPU   = avg(data.map(r=>Number(r.energy_per_unit)||0));
+  const totalAlt = sum(data.map(r=>Number(r.abnormal_alert)||0));
+  const overCnt  = data.filter(r=>r.energy_status==='OVER').length;
+
+  document.getElementById('en-avg').textContent       = fmt(avgCons,1);
+  document.getElementById('en-epu').textContent       = fmt(avgEPU,2);
+  document.getElementById('en-alerts').textContent    = fmtK(totalAlt);
+  document.getElementById('en-over').textContent      = overCnt.toLocaleString();
+  document.getElementById('en-epu-big').textContent   = fmt(avgEPU,2);
+  document.getElementById('en-alert-big').textContent = fmtK(totalAlt);
+
+  // Consumption over time — group by date, avg
+  const byDate = groupBy(data.filter(r=>r.shift_date), 'shift_date');
+  const dates  = Object.keys(byDate).sort();
+  const consData  = dates.map(d=>avg(byDate[d].map(r=>Number(r.total_consumption)||0)));
+  const baseData  = dates.map(d=>avg(byDate[d].map(r=>Number(r.baseline_target)||0)));
+  const shortLabels = dates.map(d=>ymd(d));
+
+  const tEl = document.getElementById('en-trend');
+  if(tEl){const tg=G(tEl.getContext('2d'),'rgba(255,100,100,.55)','rgba(255,100,100,.06)'); makeChart('en-trend','line',{labels:shortLabels,datasets:[{label:'AVG(total_consumption)',data:consData,borderColor:'#ff6b6b',backgroundColor:tg,fill:true,borderWidth:1.5,pointRadius:0,tension:.2}]},{scales:{x:{ticks:{maxTicksLimit:8}},y:{min:0}}});}
+
+  // Baseline vs Actual — group by year, sum
+  const byYear = {};
+  data.filter(r=>r.shift_date).forEach(r=>{
+    const y=ymd(r.shift_date).slice(0,4); if(!y)return;
+    if(!byYear[y])byYear[y]={baseline:0,actual:0};
+    byYear[y].baseline += Number(r.baseline_target)||0;
+    byYear[y].actual   += Number(r.energy_per_unit)||0;
+  });
+  const years = Object.keys(byYear).sort();
+  const bSums = years.map(y=>byYear[y].baseline);
+  const aSums = years.map(y=>byYear[y].actual);
+  const bg1 = (() => { const c=document.getElementById('en-baseline'); if(!c)return'#f00'; const g=c.getContext('2d').createLinearGradient(400,0,0,0); g.addColorStop(0,'rgba(255,90,90,.75)'); g.addColorStop(1,'rgba(255,90,90,.3)'); return g; })();
+  const bg2 = (() => { const c=document.getElementById('en-baseline'); if(!c)return'#a0f'; const g=c.getContext('2d').createLinearGradient(20,0,0,0); g.addColorStop(0,'rgba(110,70,180,.9)'); g.addColorStop(1,'rgba(110,70,180,.5)'); return g; })();
+  makeChart('en-baseline','bar',{labels:years,datasets:[
+    {label:'SUM(baseline_target)',data:bSums,backgroundColor:bg1,borderColor:'rgba(255,90,90,.9)',borderWidth:1,borderRadius:2,barPercentage:.6},
+    {label:'SUM(energy_per_unit)', data:aSums,backgroundColor:bg2,borderColor:'rgba(110,70,180,.9)',borderWidth:1,borderRadius:2,barPercentage:.6}
+  ]},{plugins:{legend:{display:true,labels:{color:'#3a5570',font:{size:8,family:"'Space Mono',monospace"},boxWidth:8,padding:8}}},scales:{y:{ticks:{callback:v=>fmtK(v)}}}});
+}
+
+// ══ NAVIGATION ══════════════════════════════════════
+const loaders = {oee:loadOEE, downtime:loadDowntime, quality:loadQuality, energy:loadEnergy};
+const loaded  = {};
+
+function showPage(key){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.ni').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+key).classList.add('active');
+  ['oee','downtime','quality','energy'].forEach((k,i)=>{ if(k===key) document.querySelectorAll('.ni')[i]?.classList.add('active'); });
+  const [t,s]=PAGE_META[key]||[key,''];
+  document.getElementById('pgtitle').textContent=t;
+  document.getElementById('pgsup').textContent='// '+s;
+  currentPage=key;
+  if(!loaded[key]){ loaded[key]=true; loaders[key]?.(); }
+}
+
+function handleRefresh(){
+  delete loaded[currentPage];
+  showSt('loading','// Refreshing…',false);
+  loaders[currentPage]?.();
+}
+
+function editDashboard(){ const id=DASH_IDS[currentPage]; if(id)window.open(`${SUPERSET_URL}/superset/dashboard/${id}/?edit=true`,'_blank'); }
+function openSuperset(){  window.open(`${SUPERSET_URL}/superset/dashboard/${DASH_IDS[currentPage]||'1'}/`,'_blank'); }
+
+// ══ PDF ══════════════════════════════════════════════
+function downloadPDF(){
+  if(currentPage==='oee')      { printOEE();      return; }
+  if(currentPage==='downtime') { printDowntime(); return; }
+  if(currentPage==='quality')  { printQuality();  return; }
+  if(currentPage==='energy')   { printEnergy();   return; }
+}
+
+// ── shared helpers ────────────────────────────────────
+function canvasImg(id){
+  const c=document.getElementById(id); if(!c)return'';
+  const t=document.createElement('canvas'); t.width=c.width; t.height=c.height;
+  const x=t.getContext('2d'); x.fillStyle='#0c1118'; x.fillRect(0,0,t.width,t.height); x.drawImage(c,0,0);
+  return t.toDataURL('image/png');
+}
+function elTxt(id){ return document.getElementById(id)?.textContent||'--'; }
+function printWindow(title, body){
+  const base=`<!DOCTYPE html><html><head><title>${title}</title>
+  <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@700;900&family=Space+Mono:wght@400;700&family=DM+Sans:wght@400;600&display=swap" rel="stylesheet">
+  <style>*{box-sizing:border-box;margin:0;padding:0}body{background:#050709;color:#d8e8f8;font-family:'DM Sans',sans-serif;padding:20px;-webkit-print-color-adjust:exact;print-color-adjust:exact}@page{size:A4 landscape;margin:8mm}
+  h1{font-family:'Orbitron',monospace;font-size:14px;font-weight:900;color:#fff;letter-spacing:.08em}
+  .sub{font-size:8px;color:#3a5570;font-family:'Space Mono',monospace;letter-spacing:.16em;margin-bottom:14px}
+  .g{display:grid;gap:10px;margin-bottom:10px}.g3{grid-template-columns:1fr 1fr 1fr}.g2{grid-template-columns:1.2fr 1fr}.g21{grid-template-columns:2fr 1fr}.g12{grid-template-columns:1fr 2fr}
+  .c{background:#0c1118;border:1px solid rgba(255,255,255,.06);border-radius:2px;padding:12px}
+  .ct{font-size:8px;font-weight:700;letter-spacing:.12em;color:#ddeeff;text-transform:uppercase;font-family:'Space Mono',monospace;margin-bottom:8px}
+  .img{width:100%;height:auto;display:block;max-height:160px;object-fit:contain}
+  .hdr{display:flex;justify-content:space-between;margin-bottom:12px}
+  .meta{font-size:8px;color:#3a5570;font-family:'Space Mono',monospace;text-align:right;line-height:1.8}.meta b{color:#00e5ff}
+  .kpi{font-family:'Orbitron',monospace;font-size:30px;font-weight:900;line-height:1;margin:4px 0}
+  .kl{font-size:7px;color:#3a5570;font-family:'Space Mono',monospace;letter-spacing:.12em;text-transform:uppercase}
+  table{width:100%;border-collapse:collapse}th{font-size:7px;color:#3a5570;letter-spacing:.12em;text-transform:uppercase;padding:5px 8px;text-align:left;border-bottom:1px solid rgba(255,255,255,.05);font-family:'Space Mono',monospace}
+  td{font-size:9px;padding:5px 8px;border-bottom:1px solid rgba(255,255,255,.025);font-family:'Space Mono',monospace}
+  </style></head><body>${body}<script>window.onload=function(){setTimeout(()=>window.print(),500);}<\/script></body></html>`;
+  const w=window.open('','_blank','width=1200,height=900');
+  w.document.write(base); w.document.close();
+  showSt('success','// PDF print dialog opened');
+}
+
+// ── OEE ──────────────────────────────────────────────
+function printOEE(){
+  const imgs={};
+  ['oee-gauge','av-chart','pf-chart','prod-chart'].forEach(id=>{const s=canvasImg(id);if(s)imgs[id]=s;});
+  const tbl=document.getElementById('oee-tbody')?.closest('table')?.outerHTML||'';
+  const ts=new Date().toLocaleString('en-GB');
+  printWindow('OEE Report',`
+  <div class="hdr"><div><div class="sub">// OEE COMMAND CENTER · LIVE DATA REPORT</div><h1>OEE OVERVIEW</h1></div>
+  <div class="meta"><div>Shift: <b>${elTxt('shiftval')}</b></div><div>Generated: <b>${ts}</b></div></div></div>
+  <div class="g g3">
+    <div class="c"><div class="ct">// OEE Score</div><div class="kpi" style="color:#00e5ff">${elTxt('oee-score-num')}</div>
+    <div style="font-size:8px;color:#3a5570;font-family:'Space Mono',monospace;margin-top:4px">Avail:${elTxt('oee-avail')} · Perf:${elTxt('oee-perf')} · Quality:${elTxt('oee-qual')}</div></div>
+    <div class="c"><div class="ct">// OEE Gauge</div>${imgs['oee-gauge']?`<img class="img" src="${imgs['oee-gauge']}">`:''}</div>
+    <div class="c"><div class="ct">// Availability Trend</div>${imgs['av-chart']?`<img class="img" src="${imgs['av-chart']}">`:''}</div>
+  </div>
+  <div class="g g2">
+    <div class="c"><div class="ct">// Performance Trend</div>${imgs['pf-chart']?`<img class="img" src="${imgs['pf-chart']}">`:''}</div>
+    <div class="c"><div class="ct">// Production vs Plan</div>${imgs['prod-chart']?`<img class="img" src="${imgs['prod-chart']}">`:''}</div>
+  </div>
+  <div class="c"><div class="ct">// Machine Status Table</div>${tbl}</div>`);
+}
+
+// ── DOWNTIME ──────────────────────────────────────────
+function printDowntime(){
+  const imgs={};
+  ['dt-dist','dt-machine'].forEach(id=>{const s=canvasImg(id);if(s)imgs[id]=s;});
+  const tbl=document.getElementById('dt-tbody')?.closest('table')?.outerHTML||'';
+  const ts=new Date().toLocaleString('en-GB');
+  printWindow('Downtime Report',`
+  <div class="hdr"><div><div class="sub">// OEE COMMAND CENTER · LIVE DATA REPORT</div><h1>MACHINE DOWNTIME</h1></div>
+  <div class="meta"><div>Shift: <b>${elTxt('shiftval')}</b></div><div>Generated: <b>${ts}</b></div></div></div>
+  <div class="g g3">
+    <div class="c"><div class="ct">// Total Downtime</div><div class="kpi" style="color:#ff3b5c">${elTxt('dt-total')}</div><div class="kl">SUM(duration_minutes)</div></div>
+    <div class="c"><div class="ct">// Machines Affected</div><div class="kpi" style="color:#f5a623">${elTxt('dt-machines')}</div><div class="kl">Unique machines</div></div>
+    <div class="c"><div class="ct">// Total Events</div><div class="kpi" style="color:#a78bfa">${elTxt('dt-events')}</div><div class="kl">Downtime records</div></div>
+  </div>
+  <div class="g g21">
+    <div class="c"><div class="ct">// Downtime Distribution</div>${imgs['dt-dist']?`<img class="img" src="${imgs['dt-dist']}">`:''}</div>
+    <div class="c"><div class="ct">// Downtime by Machine</div>${imgs['dt-machine']?`<img class="img" src="${imgs['dt-machine']}">`:''}</div>
+  </div>
+  <div class="c"><div class="ct">// Downtime Log</div>${tbl}</div>`);
+}
+
+// ── QUALITY ───────────────────────────────────────────
+function printQuality(){
+  const imgs={};
+  ['ql-gauge','ql-defects'].forEach(id=>{const s=canvasImg(id);if(s)imgs[id]=s;});
+  const tbl=document.getElementById('ql-tbody')?.closest('table')?.outerHTML||'';
+  const ts=new Date().toLocaleString('en-GB');
+  printWindow('Quality Report',`
+  <div class="hdr"><div><div class="sub">// OEE COMMAND CENTER · LIVE DATA REPORT</div><h1>QUALITY DASHBOARD</h1></div>
+  <div class="meta"><div>Shift: <b>${elTxt('shiftval')}</b></div><div>Generated: <b>${ts}</b></div></div></div>
+  <div class="g g3">
+    <div class="c"><div class="ct">// AVG Rejection Rate</div><div class="kpi" style="color:#ff3b5c">${elTxt('ql-avg-rate')}</div><div class="kl">AVG(rejection_rate)</div></div>
+    <div class="c"><div class="ct">// Critical Shifts</div><div class="kpi" style="color:#f5a623">${elTxt('ql-critical')}</div><div class="kl">Rejection > threshold</div></div>
+    <div class="c"><div class="ct">// Total Defect Units</div><div class="kpi" style="color:#39ff8a">${elTxt('ql-defects-total')}</div><div class="kl">SUM(defect_units)</div></div>
+  </div>
+  <div class="g g21">
+    <div class="c"><div class="ct">// Critical Shifts Table</div>${tbl}</div>
+    <div class="c"><div class="ct">// Rejection Rate Gauge</div>${imgs['ql-gauge']?`<img class="img" src="${imgs['ql-gauge']}">`:''}</div>
+  </div>
+  <div class="c"><div class="ct">// Top Defects</div>${imgs['ql-defects']?`<img class="img" src="${imgs['ql-defects']}">`:''}</div>`);
+}
+
+// ── ENERGY ────────────────────────────────────────────
+function printEnergy(){
+  const imgs={};
+  ['en-trend','en-baseline'].forEach(id=>{const s=canvasImg(id);if(s)imgs[id]=s;});
+  const ts=new Date().toLocaleString('en-GB');
+  printWindow('Energy Report',`
+  <div class="hdr"><div><div class="sub">// OEE COMMAND CENTER · LIVE DATA REPORT</div><h1>ENERGY DASHBOARD</h1></div>
+  <div class="meta"><div>Shift: <b>${elTxt('shiftval')}</b></div><div>Generated: <b>${ts}</b></div></div></div>
+  <div class="g g3">
+    <div class="c"><div class="ct">// AVG Consumption</div><div class="kpi" style="color:#00e5ff">${elTxt('en-avg')}</div><div class="kl">AVG(total_consumption) kWh</div></div>
+    <div class="c"><div class="ct">// AVG Energy/Unit</div><div class="kpi" style="color:#39ff8a">${elTxt('en-epu')}</div><div class="kl">AVG(energy_per_unit) kWh</div></div>
+    <div class="c"><div class="ct">// Total Alerts</div><div class="kpi" style="color:#f5a623">${elTxt('en-alerts')}</div><div class="kl">SUM(abnormal_alert)</div></div>
+  </div>
+  <div class="g g2">
+    <div class="c"><div class="ct">// Consumption Over Time</div>${imgs['en-trend']?`<img class="img" src="${imgs['en-trend']}">`:''}</div>
+    <div class="c"><div class="ct">// Baseline vs Actual</div>${imgs['en-baseline']?`<img class="img" src="${imgs['en-baseline']}">`:''}</div>
+  </div>
+  <div class="g g2">
+    <div class="c"><div class="ct">// Energy Per Unit</div><div class="kpi" style="color:#39ff8a;font-size:40px">${elTxt('en-epu-big')}</div><div class="kl">AVG kWh per unit</div></div>
+    <div class="c"><div class="ct">// Alert Count</div><div class="kpi" style="color:#f5a623;font-size:40px">${elTxt('en-alert-big')}</div><div class="kl">SUM(abnormal_alert)</div></div>
+  </div>`);
+}
+
+// ══ AUTH ═════════════════════════════════════════════
+function doLogin(){
+  const u=document.getElementById('lu').value.trim().toLowerCase();
+  const p=document.getElementById('lp').value;
+  const user=USERS[u];
+  if(user&&user.password===p){
+    document.getElementById('lerr').classList.remove('show');
+    sessionStorage.setItem('oee_user',JSON.stringify({u,...user}));
+    document.getElementById('uav').textContent=user.initials;
+    document.getElementById('unm').textContent=user.display;
+    document.getElementById('login-overlay').classList.add('hidden');
+    loadOEE();
+  } else { document.getElementById('lerr').classList.add('show'); document.getElementById('lp').value=''; }
+}
+function doLogout(){
+  if(!confirm('Sign out?'))return;
+  sessionStorage.removeItem('oee_user');
+  document.getElementById('login-overlay').classList.remove('hidden');
+  document.getElementById('lu').value=''; document.getElementById('lp').value='';
+}
+document.getElementById('lp').addEventListener('keydown',e=>{if(e.key==='Enter')doLogin();});
+document.getElementById('lu').addEventListener('keydown',e=>{if(e.key==='Enter')document.getElementById('lp').focus();});
+(function(){
+  const s=sessionStorage.getItem('oee_user');
+  if(s){try{const u=JSON.parse(s);document.getElementById('uav').textContent=u.initials;document.getElementById('unm').textContent=u.display;document.getElementById('login-overlay').classList.add('hidden');loadOEE();}catch(e){sessionStorage.removeItem('oee_user');}}
+})();
+</script>
+</body>
+</html>
